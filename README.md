@@ -29,7 +29,7 @@ Next, we want to visualize how the features are related to eachother. Plotting t
 # Plotting PC1 and PC1 of state data
 ggbiplot(ACSstate.pca)
 ```
-![Scree Plot of State PCA](https://github.com/msds692_final_project/Images/PCA_of_State_Data.PNG)
+![Scatter Plot of State PCA](https://raw.githubusercontent.com/4charliegardner/msds692_final_project/master/Images/PCA%20of%20State%20Data.PNG)
 
       
 Although it is not the clearest, we can see that the poverty statistics are all grouped together. They are also overlapping other variables, including Benefits SNAP, Unemploymnet Rate, Income with Social Security, annual income under $10K, and Public Health Coverage. This suggests there is a positive correlcation between the poverty variables and the other variables. Opposite from these are other varialble that would be negatively correlated, including the Employment Rate, Salaried workers, in armed services, work from home, and earning 75K to 100K. 
