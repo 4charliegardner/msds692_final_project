@@ -20,7 +20,7 @@ ACSstate.pca <- prcomp(ACSstate, center = TRUE,scale. = TRUE)
 fviz_eig(ACSstate.pca, main = "Scree plot of PCA for State data")
 ```
 
-![Scree Plot of State PCA](https://github.com/msds692_final_project/Images/Scree_of_State_PCA.PNG)
+![Scree Plot of State PCA](https://github.com/msds692_final_project/Images/"Scree of State PCA.PNG")
       
 The first Principle Component comprises 41% of the variance in the Data. The first 5 principle compenents comprise 81% of the data. Overall it seems that these compeonents do a strong job of explaining the data. 
 
