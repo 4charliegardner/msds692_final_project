@@ -157,60 +157,8 @@ lm(formula = Poverty_All_People ~ Not_in_labor_force + Unemployment_Rate +
     Unemployed_No_health_insurance + Not_Labor_Market_with_Health_Insurance + 
     Not_Labor_Market_with_Public_Health_Insurance + Not_Labor_Market_without_Health_Insurance, 
     data = acsNOincome)
-Residuals:
-     Min       1Q   Median       3Q      Max 
--11.6652  -1.4140  -0.1283   1.2956  14.1923 
-
-Coefficients:
-                                                                       Estimate Std. Error t value Pr(>|t|)    
-(Intercept)                                                          -4.197e+03  1.742e+03  -2.410 0.016016 *  
-Not_in_labor_force                                                    9.950e-02  1.624e-02   6.128 1.01e-09 ***
-Unemployment_Rate                                                     7.509e-02  3.995e-02   1.880 0.060246 .  
-Females_In_labor_force                                                9.725e-02  6.316e-02   1.540 0.123740    
-Females_Employment_Rate                                              -1.562e-01  6.379e-02  -2.449 0.014381 *  
-Commute_Drive_Alone                                                  -4.943e-02  1.368e-02  -3.614 0.000306 ***
-Commute_Carpool                                                      -7.205e-02  2.114e-02  -3.408 0.000662 ***
-Commute_Public_Trans                                                 -4.114e-02  2.181e-02  -1.887 0.059301 .  
-Commuting_Other_Means                                                -2.353e-01  3.820e-02  -6.159 8.30e-10 ***
-Management_business_science_and_arts_occupations                     -9.607e-02  1.577e-02  -6.094 1.24e-09 ***
-Sales_and_office_occupations                                         -4.441e-02  2.179e-02  -2.038 0.041643 *  
-Natural_resources_construction_and.maintenance_occupations           -1.047e-01  2.734e-02  -3.829 0.000131 ***
-Industry_Agriculture_forestry_fishing_hunting_and_mining             -1.426e-01  1.860e-02  -7.670 2.29e-14 ***
-Industry_Construction                                                -2.363e-01  3.135e-02  -7.537 6.29e-14 ***
-Industry_Manufacturing                                               -1.205e-01  1.446e-02  -8.333  < 2e-16 ***
-Industry_Wholesale_trade                                             -1.861e-01  4.418e-02  -4.213 2.59e-05 ***
-Industry_Transportation_warehousing_utilities                        -2.844e-01  2.575e-02 -11.048  < 2e-16 ***
-Industry_Information                                                 -2.578e-01  6.102e-02  -4.225 2.46e-05 ***
-Industry_Finance_insurance_RealEstate_rental_leasing                 -1.905e-01  3.349e-02  -5.689 1.40e-08 ***
-Industry_Professional_scientific_and_administrative_waste_management -1.534e-01  2.266e-02  -6.770 1.54e-11 ***
-Industry_Arts_Entertainment_Recreation_Food                          -3.651e-02  1.828e-02  -1.997 0.045931 *  
-Industry_Other_Services                                              -1.117e-01  4.194e-02  -2.663 0.007785 ** 
-Industry_Public_Administration                                       -3.570e-01  2.471e-02 -14.445  < 2e-16 ***
-WorkerClass_PrivateWage_SalaryWorkers                                -1.544e-01  1.532e-02 -10.075  < 2e-16 ***
-WorkerClass_SelfEmployed                                             -9.998e-02  2.719e-02  -3.677 0.000240 ***
-Income_Earned                                                        -2.698e-01  2.016e-02 -13.383  < 2e-16 ***
-Income_Social_Security                                               -3.399e-01  1.867e-02 -18.212  < 2e-16 ***
-Income_Retirement                                                    -1.716e-01  1.551e-02 -11.062  < 2e-16 ***
-Income_cash_public_assistance                                        -1.076e-01  3.178e-02  -3.385 0.000720 ***
-Benefits_SNAP                                                         2.907e-01  1.619e-02  17.958  < 2e-16 ***
-With_health_insurance                                                -1.514e-01  7.241e-02  -2.092 0.036565 *  
-With_private_health_insurance                                        -2.819e-01  2.547e-02 -11.066  < 2e-16 ***
-With_Public_Health_Coverage                                           1.464e-01  2.964e-02   4.939 8.26e-07 ***
-Children_No_health_insurance                                         -5.160e-02  2.162e-02  -2.386 0.017082 *  
-Employed_With_Private_Health_Insurance                                1.637e-01  2.892e-02   5.661 1.65e-08 ***
-Employed_With_Public_Health_Insurance                                -6.765e-02  3.100e-02  -2.182 0.029170 *  
-Unemployed_With_Public_Health_Insurance                              -1.357e-02  4.976e-03  -2.728 0.006416 ** 
-Unemployed_No_health_insurance                                       -1.046e-02  4.465e-03  -2.342 0.019231 *  
-Not_Labor_Market_with_Health_Insurance                                4.297e+01  1.742e+01   2.467 0.013679 *  
-Not_Labor_Market_with_Public_Health_Insurance                        -8.078e-02  9.663e-03  -8.360  < 2e-16 ***
-Not_Labor_Market_without_Health_Insurance                             4.291e+01  1.742e+01   2.464 0.013809 *  
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-
-Residual standard error: 2.419 on 3047 degrees of freedom
-Multiple R-squared:  0.8634,	Adjusted R-squared:  0.8616 
-F-statistic: 481.5 on 40 and 3047 DF,  p-value: < 2.2e-16
-}
+    
+    ....... }
 
 To use this model to calcuate/predict the poverty rate, you would use the same basic princple as a single regression. 
       Poverty Rate = y-intercept + x(coefficient of x) + z(coefficeint of z)....
