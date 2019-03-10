@@ -39,6 +39,27 @@ Correlation analysis allows us to determine the association/relationship between
 
 For this project, we are interested finding in both strong positive and strong negative correlations to create our predictive model.
 
+```{r}
+#Find correlation values between the Poverty Rate and each of the other variables
+PovertyCorrelations <- cor(acsNOincome$Poverty_All_People, acsNOincome)
+
+#create dataframe of results
+PovCorr_Trans <- as.data.frame(t(as.matrix(PovertyCorrelations)))
+colnames(PovCorr_Trans) <- c("correlation")
+
+#Order the complete list of variables by correlation value, so to easily identify strongest correlations
+PovCorr_Trans[order(-PovCorr_Trans$correlation), , drop =FALSE]
+```
+![Correlation Table of Poverty ~ ](https://raw.githubusercontent.com/4charliegardner/msds692_final_project/master/Images/Correlation%20Table%20Complete.PNG)
+
+###The Variables that have the strongest positive correlation with the Poverty Rate are Benefits_SNAP,	Income_Supplemental_Security, Unemployment_Rate,	With_Public_Health_Coverage, and Not_in_labor_force. 
+
+###The variables that havew the strongest negative correlation with the Poverty Rate are With_private_health_insurance,  Not_Labor_Market_with_Private_Health_Insurance, Employment_Rate, Females_Employment_Rate, and Employed_With_Private_Health_Insurance. 	
+
+###We can visualize these variables in a correlation matrix. 
+
+![Correlation Matrix of Poverty ~ ](https://raw.githubusercontent.com/4charliegardner/msds692_final_project/master/Images/Correlation%20Matrix%20Short.PNG)
+
 ## Implementation and Analysis
 
 ## Conclusion
