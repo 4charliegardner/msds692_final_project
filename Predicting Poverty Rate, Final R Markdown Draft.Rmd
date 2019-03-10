@@ -1,0 +1,368 @@
+---
+title: "Predicting Poverty Rate with ACS 5yr Variables"
+author: "Charlie Gardner"
+date: "March 9, 2019"
+output: 
+  html_document: 
+    fig_caption: yes
+    fig_height: 6
+    fig_width: 8
+---
+#Preliminaries
+###Uploading Libraries for Project
+
+```{r}
+#load libraries needed for project
+
+library(ggplot2)
+library(factoextra)
+library(corrplot)
+library(ggbiplot)
+library(ggpubr)
+library(caret)
+library(MASS)
+library(broom)
+
+
+```
+
+
+##Creating Data Tables for Project
+###For the original data, I downloaded a datatable from the U.S. Census's Burueua American Community Survey 5yr that listed many different demographic variables for all 50 states and more than 3,000 counties. I then cleaned the file in excel by eliminating unnecessary columns and reformatting their column names. 
+
+###After uploading this files into RStudio, I then created different dataframes with different variables for my project. 
+
+```{r}
+#Load cleaned dataset from American Community Survey 5 year from U.S. Census, which have been previously cleaned 
+
+ACS_5_Pop_Counties_Clean <- read.csv("G:/Data Science MS/Practicum #1/Census Data/ACS 5 Pop Counties Clean.csv")
+
+#create data table for 50 States, DC, and Puerto Rico
+ACSstate <-ACS_5_Pop_Counties_Clean[1:52 , 4:92]
+
+#create data table for counties
+ACScounty <-ACS_5_Pop_Counties_Clean[53:3088 , 4:92]
+
+#create data table with both State and County
+ACScomplete <- ACS_5_Pop_Counties_Clean[1:3088, 4:92]
+
+#Create data table for ACS Survey without Income information and reduced poverty data
+acsNOincome <-ACS_5_Pop_Counties_Clean[1:3088 , c(4:40, 51:73, 83)]
+
+#Create data table for ACS Survey without Income nor Poverty data 
+acsNOpoverty <-ACS_5_Pop_Counties_Clean[1:3088 , c(4:40, 51:73)]
+```
+
+# EDA
+## Principle Component Analysis
+###Principle Component Analysis (PCA) is a technique reducing a dataset's dimensions by extracting features that best represent the variance in that dataset. PCA is helpful when working with data that have many variables and you are not certain which are the most important. For more inforamtion: https://towardsdatascience.com/a-one-stop-shop-for-principal-component-analysis-5582fb7e0a9c 
+
+```{r}
+
+#perform Principle Component Analysis on State data
+ACSstate.pca <- prcomp(ACSstate, center = TRUE,scale. = TRUE)
+
+#Determinining the importance of the components in determining the variance of the data set
+summary(ACSstate.pca)
+
+#Visualize the culminative variance of the different principle components
+fviz_eig(ACSstate.pca, main = "Scree plot of PCA for State data")
+```
+###The first Principle Component comprises 41% of the variance in the Data. The first 5 principle compenents comprise 81% of the data. Overall it seems that these compeonents do a strong job of explaining the data. 
+
+###Next, we want to visualize how the features are related to eachother. Plotting the PCA allows you to visulaize multidementional data in just two dimentions and see how the data is grouped and potentially correllated. 
+
+```{r}
+
+#displaying the different Principle Components to see how the variables contribute to them
+ACSstate.pca$rotation[,"PC1"]
+ACSstate.pca$rotation[,"PC2"]
+
+# Plotting PC1 and PC1 of state data
+ggbiplot(ACSstate.pca)
+
+```
+
+###Although it is not the clearest, we can see that the poverty statistics are all grouped together. They are also overlapping other variables, including Benefits SNAP, Unemploymnet Rate, Income with Social Security, annual income under $10K, and Public Health Coverage. This suggests there is a positive correlcation between the poverty variables and the other variables. Opposite from these are other varialble that would be negatively correlated, including the Employment Rate, Salaried workers, in armed services, work from home, and earning 75K to 100K. 
+
+###NOw we will perform PCA on county level data. 
+
+```{r}
+#perform Principle Component Analysis on County data and evaluate the variance
+ACScounty.pca <- prcomp(ACScounty, center = TRUE,scale. = TRUE)
+summary(ACScounty.pca)
+fviz_eig(ACScounty.pca, main = "Scree plot of PCA for County data") 
+```
+
+###For the county level data, the first principle component represents 34% of the variance of the original dataset. But after the first one, the other principle components do not have very large porpotion of varince.  The first 5 components represent 59% of the variance; it would take 18 princple components to get the culmantive variance of 81%. But the PCA can still be effective in representing this data. 
+
+
+```{r}
+#Displaying principle components of County Data and visulaizing how variables are grouped. 
+
+ggbiplot(ACScounty.pca)
+
+```
+###Unfortunately, this visulaization is less clear with the greater number of datapoints, but we can still see that that the poverty stats are grouped together and are near other varilables including Public Health Coverage. Opposite of them are variables with Private Health Insurance. 
+
+```{r fig.height=6, fig.width=12}
+#perform Principle Component Analysis on complete data (both state and county) and evaluate the variance
+ACScomplete.pca <- prcomp(ACScomplete, center = TRUE,scale. = TRUE)
+summary(ACScomplete.pca)
+fviz_eig(ACScomplete.pca, main = "Scree plot of PCA for Complete ACS data") 
+
+#Displaying principle components of Complete and visulaizing how variables are grouped. 
+ggbiplot(ACScomplete.pca)
+
+```
+
+
+```{r}
+#perform Principle Component Analysis on ACS data without income statistics
+acsNOincome.pca <- prcomp(acsNOincome, center = TRUE,scale. = TRUE)
+summary(acsNOincome.pca)
+fviz_eig(acsNOincome.pca, main = "Scree plot for PCA of ACS data without Income") 
+ggbiplot(acsNOincome.pca)
+acsNOincome.pca$rotation[,"PC1"]
+acsNOincome.pca$rotation[,"PC2"]
+
+```
+
+
+```{r}
+#perform Principle Component Analysis on ACS data without income nor poverty statistics
+acsNOpoverty.pca <- prcomp(acsNOpoverty, center = TRUE,scale. = TRUE)
+summary(acsNOpoverty.pca)
+fviz_eig(acsNOpoverty.pca, main = "Scree plot for PCA of ACS data without Income Nor Poverty Data") 
+ggbiplot(acsNOpoverty.pca)
+acsNOpoverty.pca$rotation[,"PC1"]
+acsNOpoverty.pca$rotation[,"PC2"]
+
+```
+
+## Correlation Analysis
+
+
+```{r}
+#Find correlation between Poverty and each of the other variables
+PovertyCorrelations <- cor(acsNOincome$Poverty_All_People, acsNOincome)
+
+#create dataframe of results
+PovCorr_Trans <- as.data.frame(t(as.matrix(PovertyCorrelations)))
+colnames(PovCorr_Trans) <- c("correlation")
+
+#Ordering complete list of variables by correlation
+PovCorr_Trans[order(-PovCorr_Trans$correlation), , drop =FALSE]
+
+#Variables with strongest positive correlation
+head(PovCorr_Trans[order(-PovCorr_Trans$correlation), , drop =FALSE])
+
+#Variables with strongest negative correlation
+head(PovCorr_Trans[order(PovCorr_Trans$correlation), , drop =FALSE])
+
+
+```
+
+
+
+```{r}
+#Create Data Table with Strongets Correlations with Poverty Rate
+ACScorrelations <-ACS_5_Pop_Counties_Clean[1:3088 , c(83, 56, 54, 8, 59, 58, 71, 5, 10)]
+
+#Correlation Matrix
+CorrMatrix <- cor(ACScorrelations)
+corrplot(CorrMatrix, method = "circle", type = "lower")
+```
+
+
+```{r}
+
+#Scatterplots for variables with very strong correlations (.8-1)
+
+ggscatter(ACScorrelations, x = "Benefits_SNAP", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+ggscatter(ACScorrelations, x = "With_private_health_insurance", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+
+#Scatterplots for variables with strong correlations (.6-.8)
+ggscatter(ACScorrelations, x = "Income_Supplemental_Security", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+ggscatter(ACScorrelations, x = "Not_Labor_Market_with_Private_Health_Insurance", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+ggscatter(ACScorrelations, x = "Employment_Rate", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+ggscatter(ACScorrelations, x = "Unemployment_Rate", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+ggscatter(ACScorrelations, x = "Females_Employment_Rate", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+ggscatter(ACScorrelations, x = "With_Public_Health_Coverage", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+```
+
+
+###Correlations Analysis with PCA results
+```{r}
+#Create Data Table with variables grouped by PCA
+GroupedByPCA <-ACS_5_Pop_Counties_Clean[1:3088 , c(83, 5, 8, 10, 15, 18, 20, 41, 42, 46, 47, 50, 51, 52, 54, 55, 56, 57, 58, 59, 60, 64)]
+
+#Correlation Matrix of Variables from PCA
+GuessedCorr <- cor(GroupedByPCA)
+corrplot(GuessedCorr, method = "circle", type = "lower")
+
+```
+
+
+```{r}
+#correlation for PC1
+povPCAdf <- cbind(acsNOincome$Poverty_All_People, acsNOpoverty.pca$x[, "PC1"])
+colnames(povPCAdf) <- c("Poverty_Rate", "ACS_PC1")
+povPCAdf <- as.data.frame(povPCAdf)
+
+cor(povPCAdf$ACS_PC1, povPCAdf$Poverty_Rate, method="pearson")
+
+#correlation for PC2
+
+acsPC2 <- acsNOpoverty.pca$x[, "PC2"]
+cor(acsPC2, ACScomplete$Poverty_All_People)
+
+
+```
+
+
+##Linear Modelling
+
+```{r}
+#linear Regression for PC1
+lmPovertyPCA <- lm(acsNOincome$Poverty_All_People ~ acsNOpoverty.pca$x[, "PC1"])
+summary(lmPovertyPCA)
+ggplot(lmPovertyPCA)
+#ggplot( aes(x=acsNOpoverty.pca$x[, "PC1"], y=ACScomplete$Poverty_All_People)) + geom_point() + stat_smooth(method = "lm", col = "red")
+```
+
+```{r}
+#linear Regression for Strongest Correlations
+lmSNAP <- lm(acsNOincome$Poverty_All_People ~ ACScomplete$Benefits_SNAP)
+summary(lmSNAP)
+
+ggplot(ACScomplete, aes(x= Benefits_SNAP, y=Poverty_All_People)) + 
+  geom_point() + stat_smooth(method = "lm", col = "red")
+
+```
+
+```{r}
+#linear Regression for Strongest Correlations
+lmPrivateHealth <- lm(ACScomplete$Poverty_All_People ~ ACScomplete$With_private_health_insurance)
+summary(lmPrivateHealth)
+ggplot(ACScomplete, aes(x= With_private_health_insurance, y=Poverty_All_People)) + 
+  geom_point() + stat_smooth(method = "lm", col = "red")
+
+```
+```{r}
+# Split the data into training and test set
+set.seed(123)
+training.samples <- acsNOincome$Poverty_All_People %>%
+  createDataPartition(p = 0.8, list = FALSE)
+train.data  <- acsNOincome[training.samples, ]
+test.data <- acsNOincome[-training.samples, ]
+
+# Build the model
+model <- lm(Poverty_All_People ~ Benefits_SNAP, data = train.data)
+
+# Make predictions and compute the R2, RMSE and MAE
+predictions <- model %>% predict(test.data)
+data.frame( R2 = R2(predictions, test.data$Poverty_All_People),
+            RMSE = RMSE(predictions, test.data$Poverty_All_People),
+            MAE = MAE(predictions, test.data$Poverty_All_People))
+
+#prediction error rate
+RMSE(predictions, test.data$Poverty_All_People)/mean(test.data$Poverty_All_People)
+
+```
+
+
+```{r}
+# Split the data into training and test set
+set.seed(123)
+training.samples <- acsNOincome$Poverty_All_People %>%
+  createDataPartition(p = 0.8, list = FALSE)
+train.data  <- acsNOincome[training.samples, ]
+test.data <- acsNOincome[-training.samples, ]
+
+# Build the model
+model <- lm(Poverty_All_People ~ With_private_health_insurance, data = train.data)
+
+# Make predictions and compute the R2, RMSE and MAE
+predictions <- model %>% predict(test.data)
+data.frame( R2 = R2(predictions, test.data$Poverty_All_People),
+            RMSE = RMSE(predictions, test.data$Poverty_All_People),
+            MAE = MAE(predictions, test.data$Poverty_All_People))
+
+#prediction error rate
+RMSE(predictions, test.data$Poverty_All_People)/mean(test.data$Poverty_All_People)
+```
+
+```{r}
+
+
+# Split the data into training and test set
+set.seed(123)
+training.samples <- povPCAdf$Poverty_Rate %>%
+  createDataPartition(p = 0.8, list = FALSE)
+train.data  <- povPCAdf[training.samples, ]
+test.data <- povPCAdf[-training.samples, ]
+
+# Build the model
+
+lmPovertyPCA <- lm(Poverty_Rate ~ ACS_PC1, data = train.data)
+
+
+# Make predictions and compute the R2, RMSE and MAE
+predictions <- lmPovertyPCA %>% predict(test.data)
+data.frame( R2 = R2(predictions, test.data$Poverty_Rate),
+            RMSE = RMSE(predictions, test.data$Poverty_Rate),
+            MAE = MAE(predictions, test.data$Poverty_Rate))
+
+#prediction error rate
+RMSE(predictions, test.data$Poverty_Rate)/mean(test.data$Poverty_Rate)
+```
+
+##Linear MOdel with multiple regressions: StepAIC Analysis
+
+```{r}
+
+acsNOincome.lm <- lm(Poverty_All_People ~., data = acsNOincome)
+AICmodelACS <- stepAIC(acsNOincome.lm, direction = "both", trace = FALSE)
+summary(AICmodelACS)
+AICmodelACS$anova
+
+
+```
+
+```{r}
+
+library(broom)
+
+
+glance(AICmodelACS)%>%
+  dplyr::select(adj.r.squared, sigma, AIC, BIC, p.value)
+glance(lmPovertyPCA)%>%
+  dplyr::select(adj.r.squared, sigma, AIC, BIC, p.value)
+glance(lmSNAP)%>%
+  dplyr::select(adj.r.squared, sigma, AIC, BIC, p.value)
+glance(lmPrivateHealth)%>%
+  dplyr::select(adj.r.squared, sigma, AIC, BIC, p.value)
+
+```
+
+```{r}
+sigma(AICmodelACS)/mean(acsNOincome$Poverty_All_People)
+sigma(lmPovertyPCA)/mean(acsNOincome$Poverty_All_People)
+sigma(lmSNAP)/mean(acsNOincome$Poverty_All_People)
+sigma(lmPrivateHealth)/mean(acsNOincome$Poverty_All_People)
+
+#http://www.sthda.com/english/articles/38-regression-model-validation/158-regression-model-accuracy-metrics-r-square-aic-bic-cp-and-more/
+
+
+```
+
+
