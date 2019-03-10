@@ -1,7 +1,7 @@
 # Predicting the Poverty Rate with ACS 5Yr Variables
-MSDS 692 Final Project
+###MSDS 692 Final Project
 
-Final presentation video: https://youtu.be/9nSMkF7D_mU
+###Final presentation video: https://youtu.be/9nSMkF7D_mU
 
 ## Project Overview
 Could we predict the poverty rate of different geographies in the United States by excluding income levels and instead utilizing other demographic variables?
