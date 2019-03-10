@@ -8,11 +8,24 @@ Could we predict the poverty rate of different geographies in the United States 
 
 This project explores the data from the U.S. Census’ American Community Survey (ACS-5yr) to find correlations between the poverty rate and other variables. We will explore data both at the state and county level, and find the best predictors and models. These could then be used to find the poverty rate in counties where the U.S. Census does not collect poverty data each year. 
 
-## EDA
+## EDA\Principle Component Analysis
+### Principle Component Analysis (PCA) is a technique reducing a dataset's dimensions by extracting features that best represent the variance in that dataset. PCA is helpful when working with data that have many variables and you are not certain which are the most important.
 
+```{r}
+#perform Principle Component Analysis on State data
+ACSstate.pca <- prcomp(ACSstate, center = TRUE,scale. = TRUE)
 
-![image caption] (image path)
+#Visualize the culminative variance of the different principle components
+fviz_eig(ACSstate.pca, main = "Scree plot of PCA for State data")
+```
 
+msds692_final_project/Images/Scree of State PCA.PNG
+      
+The first Principle Component comprises 41% of the variance in the Data. The first 5 principle compenents comprise 81% of the data. Overall it seems that these compeonents do a strong job of explaining the data. 
+
+Next, we want to visualize how the features are related to eachother. Plotting the PCA allows you to visulaize multidementional data in just two dimentions and see how the data is grouped and potentially correllated.
+
+Although it is not the clearest, we can see that the poverty statistics are all grouped together. They are also overlapping other variables, including Benefits SNAP, Unemploymnet Rate, Income with Social Security, annual income under $10K, and Public Health Coverage. This suggests there is a positive correlcation between the poverty variables and the other variables. Opposite from these are other varialble that would be negatively correlated, including the Employment Rate, Salaried workers, in armed services, work from home, and earning 75K to 100K. 
 
 ## Implementation and Analysis
 
