@@ -1,0 +1,438 @@
+---
+title: "Predicting Poverty Rate with ACS 5yr Variables"
+author: "Charlie Gardner"
+date: "March 9, 2019"
+output:
+  html_document:
+    fig_caption: yes
+    fig_height: 6
+    fig_width: 8
+  pdf_document: default
+---
+#Introduction
+###Could we predict the poverty rate of different geographies in the United States by excluding income levels and instead utilizing other demographic variables?
+
+###This project will explore the data from the U.S. Census' American Community Survey (ACS-5yr) to find correlations between the poverty rate and other variables We will explore data both at the state and county level, and find the best predictors and models. These could then be used to find the poverty rate in counties where the U.S. Census does not collect poverty data each year. 
+
+#Preliminaries
+###Uploading Libraries for Project
+
+```{r}
+#load libraries needed for project
+
+library(ggplot2)
+library(factoextra)
+library(corrplot)
+library(ggbiplot)
+library(ggpubr)
+library(caret)
+library(MASS)
+library(broom)
+
+
+```
+
+
+##Creating Data Tables for Project
+###For the original data, I downloaded a datatable from the U.S. Census's Burueua American Community Survey 5yr that listed many different demographic variables for all 50 states and more than 3,000 counties. I then cleaned the file in excel by eliminating unnecessary columns and reformatting their column names. 
+
+###After uploading this files into RStudio, I then created different dataframes with different variables for my project. 
+
+```{r}
+#Load cleaned dataset from American Community Survey 5 year from U.S. Census, which have been previously cleaned 
+
+ACS_5_Pop_Counties_Clean <- read.csv("G:/Data Science MS/Practicum #1/Census Data/ACS 5 Pop Counties Clean.csv")
+
+#create data table for 50 States, DC, and Puerto Rico
+ACSstate <-ACS_5_Pop_Counties_Clean[1:52 , 4:92]
+
+#create data table for counties
+ACScounty <-ACS_5_Pop_Counties_Clean[53:3088 , 4:92]
+
+#create data table with both State and County
+ACScomplete <- ACS_5_Pop_Counties_Clean[1:3088, 4:92]
+
+#Create data table for ACS Survey without Income information and reduced poverty data
+acsNOincome <-ACS_5_Pop_Counties_Clean[1:3088 , c(4:40, 51:73, 83)]
+
+#Create data table for ACS Survey without Income nor Poverty data 
+acsNOpoverty <-ACS_5_Pop_Counties_Clean[1:3088 , c(4:40, 51:73)]
+```
+
+# EDA
+## Principle Component Analysis
+###Principle Component Analysis (PCA) is a technique reducing a dataset's dimensions by extracting features that best represent the variance in that dataset. PCA is helpful when working with data that have many variables and you are not certain which are the most important. For more inforamtion: https://towardsdatascience.com/a-one-stop-shop-for-principal-component-analysis-5582fb7e0a9c 
+
+```{r}
+
+#perform Principle Component Analysis on State data
+ACSstate.pca <- prcomp(ACSstate, center = TRUE,scale. = TRUE)
+
+#Determinining the importance of the components in determining the variance of the data set
+summary(ACSstate.pca)
+
+#Visualize the culminative variance of the different principle components
+fviz_eig(ACSstate.pca, main = "Scree plot of PCA for State data")
+```
+
+###The first Principle Component comprises 41% of the variance in the Data. The first 5 principle compenents comprise 81% of the data. Overall it seems that these compeonents do a strong job of explaining the data. 
+
+###Next, we want to visualize how the features are related to eachother. Plotting the PCA allows you to visulaize multidementional data in just two dimentions and see how the data is grouped and potentially correllated. 
+
+```{r}
+
+#displaying the different Principle Components to see how the variables contribute to them
+ACSstate.pca$rotation[,"PC1"]
+ACSstate.pca$rotation[,"PC2"]
+
+# Plotting PC1 and PC1 of state data
+ggbiplot(ACSstate.pca)
+
+```
+
+###Although it is not the clearest, we can see that the poverty statistics are all grouped together. They are also overlapping other variables, including Benefits SNAP, Unemploymnet Rate, Income with Social Security, annual income under $10K, and Public Health Coverage. This suggests there is a positive correlcation between the poverty variables and the other variables. Opposite from these are other varialble that would be negatively correlated, including the Employment Rate, Salaried workers, in armed services, work from home, and earning 75K to 100K. 
+
+###NOw we will perform PCA on county level data. 
+
+```{r}
+#perform Principle Component Analysis on County data and evaluate the variance
+ACScounty.pca <- prcomp(ACScounty, center = TRUE,scale. = TRUE)
+summary(ACScounty.pca)
+fviz_eig(ACScounty.pca, main = "Scree plot of PCA for County data") 
+```
+
+###For the county level data, the first principle component represents 34% of the variance of the original dataset. But after the first one, the other principle components do not have very large porpotion of varince.  The first 5 components represent 59% of the variance; it would take 18 princple components to get the culmantive variance of 81%. But the PCA can still be effective in representing this data. 
+
+
+```{r}
+#Displaying principle components of County Data and visulaizing how variables are grouped. 
+
+ggbiplot(ACScounty.pca)
+
+```
+
+###Unfortunately, this visulaization is less clear with the greater number of datapoints, but we can still see that that the poverty stats are grouped together and are near other varilables including Public Health Coverage. Opposite of them are variables with Private Health Insurance. 
+
+###Next we will perform a PCA on the complete data table, combining both the State and County levels. 
+
+```{r}
+#perform Principle Component Analysis on complete data (both state and county) and evaluate the variance
+ACScomplete.pca <- prcomp(ACScomplete, center = TRUE,scale. = TRUE)
+summary(ACScomplete.pca)
+fviz_eig(ACScomplete.pca, main = "Scree plot of PCA for Complete ACS data") 
+```
+
+###For the combined data, the results are similar to the county level. The first principle component represents 34% of the variance, and the first 5 components culminate in representing 59% of the variance. Interestingly though, these plot of the firsts two components is basically inversed, though the groupings of variables remain similar. 
+
+```{r}
+#Displaying principle components of Complete and visulaizing how variables are grouped
+ggbiplot(ACScomplete.pca)
+
+```
+
+
+
+## Correlation Analysis
+###Correlation analysis allows us to determine the association/relationship between different variables. When variables are positively correlated, they both increase or decrease together. WHen variables are negatively correlated, when one increases the other decreases. When analyzing a correlation, when the value approaches 1, there is a very strong positive correlation. When the value approaches -1, there is a very strong negative correlation. When the value is close to 0, there is no correlation and the two variables are independent from each other. 
+
+###For this project, we are interested finding in both strong positive and strong negative correlations to create our predictive model.
+
+```{r}
+#Find correlation values between the Poverty Rate and each of the other variables
+PovertyCorrelations <- cor(acsNOincome$Poverty_All_People, acsNOincome)
+
+#create dataframe of results
+PovCorr_Trans <- as.data.frame(t(as.matrix(PovertyCorrelations)))
+colnames(PovCorr_Trans) <- c("correlation")
+
+#Order the complete list of variables by correlation value, so to easily identify strongest correlations
+PovCorr_Trans[order(-PovCorr_Trans$correlation), , drop =FALSE]
+
+#Variables with strongest positive correlation
+head(PovCorr_Trans[order(-PovCorr_Trans$correlation), , drop =FALSE])
+
+#Variables with strongest negative correlation
+head(PovCorr_Trans[order(PovCorr_Trans$correlation), , drop =FALSE])
+
+
+```
+
+###The Variables that have the strongest positive correlation with the Poverty Rate are Benefits_SNAP,	Income_Supplemental_Security, Unemployment_Rate,	With_Public_Health_Coverage, and Not_in_labor_force. 
+
+###The variables that havew the strongest negative correlation with the Poverty Rate are With_private_health_insurance,  Not_Labor_Market_with_Private_Health_Insurance, Employment_Rate, Females_Employment_Rate, and Employed_With_Private_Health_Insurance. 	
+
+
+###We can visualize these variables in a correlation matrix. 
+
+```{r}
+#Create Data Table with Strongest Correlations with Poverty Rate
+ACScorrelations <-ACS_5_Pop_Counties_Clean[1:3088 , c(83, 56, 54, 8, 59, 58, 71, 5, 10)]
+
+#Correlation Matrix
+CorrMatrix <- cor(ACScorrelations)
+corrplot(CorrMatrix, method = "circle", type = "lower")
+```
+
+###Just for some contrast, here is a correlation matrix with the variables we had intially identified as being grouped together in the PCA plot
+
+```{r}
+#Create Data Table with variables grouped by PCA
+GroupedByPCA <-ACS_5_Pop_Counties_Clean[1:3088 , c(83, 5, 8, 10, 15, 18, 20, 41, 42, 46, 47, 50, 51, 52, 54, 55, 56, 57, 58, 59, 60, 64)]
+
+#Correlation Matrix of Variables from PCA
+GuessedCorr <- cor(GroupedByPCA)
+corrplot(GuessedCorr, method = "circle", type = "lower")
+
+```
+
+###This mattrix shows a mixt of strongly correlated values and others that are independent. SO while while we did correctly identify some of the strongly correlate valudes on the PCA plot, we overlooked or misidentified others. It is a good practice to create the list of correlations and also look at the values rather. 
+
+###Also of interest from this correlation matrix, even though we included some income levels, they are not the strongest correlations with poverty.  This is because the poverty level is variable depending upon the size of a household. 
+
+###Another way to visualize correlations is as a scatterplot, which can provide insight in how condensed or sprawled the data is. It also lets us see what direction the data is going. 
+
+###Scatterplots for variables with very strong correlations (values between +/- .8 & 1.0)
+
+```{r}
+
+#Scatterplots between Poverty and recieving SNAP Benefits
+ggscatter(ACScorrelations, x = "Benefits_SNAP", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+#Scatterplot between Poverty and havinvg private health insurance
+ggscatter(ACScorrelations, x = "With_private_health_insurance", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+```
+
+
+###Scatterplots for variables with strong correlations (values between +/- .6 & .8)
+```{r}
+#Scatterplots for correlation between Poverty and receiving supplemental social security benefits
+ggscatter(ACScorrelations, x = "Income_Supplemental_Security", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+#Scatterplot between Poverty and havinvg private health insurance, but not in the labor market
+ggscatter(ACScorrelations, x = "Not_Labor_Market_with_Private_Health_Insurance", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+#Scatterplot between Poverty and the employment rate
+ggscatter(ACScorrelations, x = "Employment_Rate", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+#Scatterplot between Poverty and the employment rate
+ggscatter(ACScorrelations, x = "Unemployment_Rate", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+#scatterplot between poverty and the female employment rate
+ggscatter(ACScorrelations, x = "Females_Employment_Rate", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+#scatterplot between poverty and public helath coverage
+ggscatter(ACScorrelations, x = "With_Public_Health_Coverage", y= "Poverty_All_People", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+
+```
+
+###Even though we excluded the income levels, most these strongly correlated variables are often associated with recieving income or not recieving income. If you are employed, you are less likely to live in poverty. But correlation does not mean causation. Recieving SNAP benefits does not make you impoverished, rather you are more likely to recieve that benefit if you are low incomed.
+
+###Many of the non-job related variables have a very low correlation or non at all, such as commuting on Public Transportation. The most unexpected results is that recieving private health insurance has a very strong negative correlation to poverty. But thIs makes sense, because having private health care is an indicator that not only do you have a job, but a good job that provides it as a benefit or provides enough income for you to purchase it. 
+
+###A question for further explanation: if private health insurance is a very strong indicator that one does not live under the poverty rate, why isn't having public health insurance as strongly positively correlated with poverty? Two possibilities are that public health coverage does not reach everyone in need. Or that public health coverage actually helps lift peopel out of poverty. Or it could be combination of the both. 
+
+##Correlations Analysis with PCA results
+
+###Since the idea of the project is to find model to predict the poverty rate, while excluding income levels, we will remove those variable from the PCA. We will take the first couple principle components as representative of the data set to see if we can find a correlation with poverty. 
+
+```{r}
+#perform Principle Component Analysis on ACS data without income nor poverty statistics
+acsNOpoverty.pca <- prcomp(acsNOpoverty, center = TRUE,scale. = TRUE)
+summary(acsNOpoverty.pca)
+
+```
+
+
+
+```{r}
+#combine the results of PC1 and the Poverty rate so that we can perform a correlcation analysis on them
+povPCAdf <- cbind(acsNOincome$Poverty_All_People, acsNOpoverty.pca$x[, "PC1"], acsNOpoverty.pca$x[, "PC2"])
+colnames(povPCAdf) <- c("Poverty_Rate", "ACS_PC1", "ACS_PC2")
+povPCAdf <- as.data.frame(povPCAdf)
+
+#perform correlation for PC1
+cor(povPCAdf$ACS_PC1, povPCAdf$Poverty_Rate, method="pearson")
+
+#correlation for PC2
+cor(povPCAdf$ACS_PC2, povPCAdf$Poverty_Rate, method="pearson")
+
+#Scatterplots for correlation between Poverty and receiving supplemental social security benefits
+ggscatter(povPCAdf, x = "ACS_PC1", y= "Poverty_Rate", add = "reg.line", conf.int = TRUE,  cor.coef = TRUE, cor.method = "pearson")
+```
+
+###There is a strong correlation between the poverty rate and PC1, and we will use this component in our linear models as a potential predictor. But in order to do this, we have to find the equation for the line with regression analysis. 
+
+#Regresson Analysis
+##Linear Modelling
+###Linear regression is a basic type of predictive analysis, which can model the relationship between two variales (one dependent and the other explanitory). From looking at the correlations scatterplots, it is clear that a simple linear regression can be created for these variables.
+
+
+```{r}
+#linear Regression for Poverty and SNAP Benefits
+lmSNAP <- lm(acsNOincome$Poverty_All_People ~ ACScomplete$Benefits_SNAP)
+summary(lmSNAP)
+
+ggplot(ACScomplete, aes(x= Benefits_SNAP, y=Poverty_All_People)) + 
+  geom_point() + stat_smooth(method = "lm", col = "red")
+
+View(acsNOincome)
+
+```
+
+###The plot of the linear model is nearly identical to the correlations scatterplots of the same variables. And now we can identify the equation for the linear model: Poverty Rate = x(.82504) + 4.62331; where x = the percentage of persons recieving SNAP benefits in that geography. So if 14.4% of people recieve SNAP in a county then you can calculate: Poverty Rate = 14.4(.82504) + 4.62332. Which predicts the Poverty Rate = 16.5%. 
+
+###We can create similar models for variables that are negatively correlated, specifically between Poverty Rate and Private Healthcare.
+
+```{r}
+#linear Regression for Poverty and Private Health Insurance
+lmPrivateHealth <- lm(ACScomplete$Poverty_All_People ~ ACScomplete$With_private_health_insurance)
+summary(lmPrivateHealth)
+ggplot(ACScomplete, aes(x= With_private_health_insurance, y=Poverty_All_People)) + 
+  geom_point() + stat_smooth(method = "lm", col = "red")
+
+```
+
+###We can also create a linear model with the PcA results and the Poverty Rate
+
+```{r}
+#Create linear model for PC1
+lmPovertyPCA <- lm(acsNOincome$Poverty_All_People ~ acsNOpoverty.pca$x[, "PC1"])
+summary(lmPovertyPCA)
+
+#plot  model, which just has a single linear regression
+ggplot(povPCAdf, aes(x= ACS_PC1, y=Poverty_Rate)) + geom_point() + stat_smooth(method = "lm", col = "red")
+
+```
+
+###While it is possible to create a linear model with the PCA, it is hard to understand how this could be used for predicting the poverty rate with new data. Since the principle component is comprised of data that is transformed, it is not clear what an individual x variable signfies. The clear advantage of the PCA for linear models would be to create visualizations. 
+
+##Testing Linear Models
+###While it is good to have linear models for data that we alraedy have, we will eventually need to use the model to predict new data. We can use cross-validation to measure how well a model perform in predicting data it has not yet seen. To do this, we can divide the data we have into two segments: one for training the model and the other for testing it. 
+
+
+```{r}
+# Split the data into training and test set
+set.seed(123)
+training.samples <- acsNOincome$Poverty_All_People %>%
+  createDataPartition(p = 0.8, list = FALSE)
+train.data  <- acsNOincome[training.samples, ]
+test.data <- acsNOincome[-training.samples, ]
+```
+
+###Next, We create a linear model for the variables using only the training data set, and use it to make predictions. We then can test how well these predictions do against the actual data. 
+
+```{r}
+
+# Build the model for SNAP Benefits
+SNAPmodel <- lm(Poverty_All_People ~ Benefits_SNAP, data = train.data)
+
+# Make predictions with SNAP Model and compute the R2, RMSE and MAE
+predictions1 <- SNAPmodel %>% predict(test.data)
+data.frame( R2 = R2(predictions1, test.data$Poverty_All_People),
+            RMSE = RMSE(predictions1, test.data$Poverty_All_People),
+            MAE = MAE(predictions1, test.data$Poverty_All_People))
+
+#prediction error rate for SNAP Model
+RMSE(predictions1, test.data$Poverty_All_People)/mean(test.data$Poverty_All_People)
+
+```
+
+
+```{r}
+# Build the model for Private Health Insurance
+PrivHealthmodel <- lm(Poverty_All_People ~ With_private_health_insurance, data = train.data)
+
+# Make predictions with Private Health Insurance and compute the R2, RMSE and MAE
+predictions2 <- PrivHealthmodel %>% predict(test.data)
+data.frame( R2 = R2(predictions2, test.data$Poverty_All_People),
+            RMSE = RMSE(predictions2, test.data$Poverty_All_People),
+            MAE = MAE(predictions2, test.data$Poverty_All_People))
+
+#prediction error rate for Private Health Insurance
+RMSE(predictions2, test.data$Poverty_All_People)/mean(test.data$Poverty_All_People)
+```
+
+###When evaluating the predictions, we look at the R2 (the higher the better), RMSW (the lower the better), and MAE (the lower the better). We  can also cacluate the prediction error rate by dividing the RMSE by the average value of the outcome variable (and obviously the smaller the better).
+
+###Even though Snap Benefits had a higher correlation, the linear model created from Private Healthcare is comparable since they altnerate better scores when assessing the R-Squated, Root Mean Squared Error, and Mean Absolute Error values. And the prediction error is basically the same. 
+
+### In terms of linear models, either Having Private Health Insurance or Snap Benefits could serve as a good indicator and predictor for the poverty rate. 
+
+##Multiple Regression Linear MOdels 
+
+###It is possible to test the PCA results too, but because the variables were transformed when the features were reduced, there is no easy way to use the model for new data. 
+```{r}
+
+# Split the data of PCA into training and test set
+set.seed(123)
+training.samples <- povPCAdf$Poverty_Rate %>%
+  createDataPartition(p = 0.8, list = FALSE)
+train.data  <- povPCAdf[training.samples, ]
+test.data <- povPCAdf[-training.samples, ]
+
+# Build the model for PCA
+
+lmPovertyPCA <- lm(Poverty_Rate ~ ACS_PC1, data = train.data)
+
+
+# Make predictions for PCA and compute the R2, RMSE and MAE
+predictions3 <- lmPovertyPCA %>% predict(test.data)
+data.frame( R2 = R2(predictions3, test.data$Poverty_Rate),
+            RMSE = RMSE(predictions3, test.data$Poverty_Rate),
+            MAE = MAE(predictions3, test.data$Poverty_Rate))
+
+#prediction error rate of PCA linear model
+RMSE(predictions3, test.data$Poverty_Rate)/mean(test.data$Poverty_Rate)
+```
+
+
+###While performing a PCA reduces the dimensions of a dataset by extracting new features, StepAIC reduces the dimensions of a dataset by removing features. This makes it more difficult to represent in a plot, but is more useful in creating a linear model to make predictions. 
+
+```{r}
+#Create linear model of poverty rate and all other variables
+acsNOincome.lm <- lm(Poverty_All_People ~., data = acsNOincome)
+
+#Use AIC stepwise analysis to remove features that do not add to the predictive capacability of the model
+AICmodelACS <- stepAIC(acsNOincome.lm, direction = "both", trace = FALSE)
+
+#Show the variables of the initial model and new model with the number of features reduced
+AICmodelACS$anova
+```
+
+###The new model consists of 40 features, after 21 have been removed. The goal is remove as many features as possible while maintaining the predictive ability of the model. It is interesting that the AIC analysis did remove features that had high correlations. I am not sure why this is, but perhaps there were redundency between these variables and variables included in the model. 
+
+###We can use the summary function to view the coefficents for each feature in the model. 
+
+```{r}
+#Show coefficients of new model and their significance to the model
+summary(AICmodelACS)
+
+```
+###To use this model to calcuate/predict the poverty rate, you would use the same basic princple as a single regression. 
+### Poverty Rate = y-intercept + x(coefficient of x) + z(coefficeint of z)....
+###Each prediction would require each explanitory variable, otherise you can not caclulate the y variable. 
+
+
+###We can use the glance() function to assess the quality of this AIC model with multiple regressions.
+
+```{r}
+
+#Assessing Linear Model created from the AIC Stepwise function
+glance(AICmodelACS)%>%
+  dplyr::select(adj.r.squared, sigma, AIC, BIC, p.value)
+
+#Prediction Error Rate for AIC Model
+sigma(AICmodelACS)/mean(acsNOincome$Poverty_All_People)
+```
+
+#Conclusion 
+##Which is the best Model?
+
+###After comparing the the linear models for Private Health Care (the best single line regression) and the multi-line regression model created with AIC, it is clear that the AIC model is a more accurate predictor.  It has a higher R2 value, a lower RMSE value, and a prediction error rate of only 15% compared to 23% error rate of the Private Health Insurance.
+
+###But even though AIC prevents over-fitting of a model, the multi-regression model is very complex and difficult to visualize in 2 dimensions. Overall, the linear model of Private Health Insurance does a strong job of predicting the poverty rate on its own. 
+
+###In either case, it is possible to predict the poverty rate of different geographies based upon different demographics, even if you don't have income levels data. 
+
+
